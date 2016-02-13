@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	const count = 1000000
+	const count = 10000000
 	arr := [count]int{}
 	for i := 0; i < count; i++ {
 		arr[i] = rand.Int()

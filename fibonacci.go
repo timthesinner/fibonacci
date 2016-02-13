@@ -4,6 +4,7 @@ package fibonacci
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 )
 
 var fibonacci_numbers = [...]int{2, 3, 5, 8, 13, 21,
@@ -44,7 +45,7 @@ type Heap struct {
 }
 
 func NewHeap(comp func(interface{}, interface{}) int) *Heap {
-	return &Heap{Compare: comp, fiboIndex: 0, fiboTarget: fibonacci_numbers[0], oldFiboTarget: fibonacci_numbers[0]}
+	return &Heap{Compare: comp, size: 0, fiboIndex: 0, fiboTarget: fibonacci_numbers[0], oldFiboTarget: fibonacci_numbers[0]}
 }
 
 func (h *Heap) Size() int {
@@ -53,10 +54,10 @@ func (h *Heap) Size() int {
 
 func (h *Heap) String() string {
 	if h.size == 0 {
-		return "Heap[]"
+		return "Heap[Size:0]"
 	}
 
-	buff := bytes.NewBufferString("Heap[\n")
+	buff := bytes.NewBufferString("Heap[Size:" + strconv.Itoa(h.size) + "\n")
 	printNode(h.minimum, 1, buff)
 	buff.WriteString("]")
 	return buff.String()
@@ -92,6 +93,8 @@ func (h *Heap) peek() interface{} {
 }
 
 func (h *Heap) Insert(v interface{}) {
+	h.size++
+
 	node := &HeapNode{value: v}
 	minimum := h.minimum
 	if minimum != nil {
@@ -109,88 +112,102 @@ func (h *Heap) Insert(v interface{}) {
 		node.right = node
 	}
 
-	h.size++
 	if h.size%h.fiboTarget == 0 {
-		h.oldFiboTarget = h.fiboIndex
-		h.fiboIndex += 1
+		h.oldFiboTarget = h.fiboTarget
+		h.fiboIndex++
 		h.fiboTarget = fibonacci_numbers[h.fiboIndex]
 		h.consolidate()
 	}
 }
 
+func swap(a, b *HeapNode) {
+	v := b.value
+	b.value = a.value
+	a.value = v
+}
+
 func (h *Heap) consolidate() {
-	numberRoots := 0
+	if h.minimum == nil {
+		return
+	}
+
+	//fmt.Println("BEFORE", h.String())
+
 	minimum := h.minimum
-
-	if minimum != nil {
-		numberRoots = 1
-		for current := minimum.right; current != minimum; current = current.right {
-			numberRoots += 1
-		}
+	count := 1
+	for current := minimum.right; current != minimum; current = current.right {
+		count++
 	}
 
-	nodeDegreeList := make(map[int]*HeapNode)
-	current := minimum
-	for numberRoots > 0 {
-		degree := current.degree
-		for child, ok := nodeDegreeList[degree]; ok; child, ok = nodeDegreeList[degree] {
-			if child == current {
-				break
-			}
-
-			parent := current
-			if h.Compare(current.value, child.value) > 0 {
-				temp := child
-				child = parent
-				parent = temp
-			}
-
-			if child == minimum {
-				minimum = parent
-			}
-			link(child, parent)
-			current = parent
-			delete(nodeDegreeList, degree)
-			degree++
-		}
-
-		nodeDegreeList[degree] = current
-		current = current.right
-		numberRoots--
+	roots := make([]*HeapNode, count)
+	roots[0] = minimum
+	count = 1
+	for current := minimum.right; current != minimum; current = current.right {
+		roots[count] = current
+		count++
 	}
 
-	newMin := minimum
+	degrees := make([]*HeapNode, 32) //TODO FIX
+	for _, current := range roots {
+		for degree := current.degree; degrees[degree] != nil; degree = current.degree {
+			same := degrees[degree]
+
+			//	fmt.Println("PRE MERGE", h.String(), h.minimum.String(), current.String(), same.String())
+			if h.Compare(same.value, current.value) > 0 {
+				merge(current, same)
+				if h.minimum == same {
+					h.minimum = current
+				}
+			} else {
+				merge(same, current)
+				if h.minimum == current {
+					h.minimum = same
+				}
+				current = same
+			}
+			//fmt.Println(h.String())
+
+			degrees[degree] = nil
+		}
+		degrees[current.degree] = current
+	}
+
+	minimum = h.minimum
+	newMin := h.minimum
 	for right := minimum.right; right != minimum; right = right.right {
 		if h.Compare(right.value, newMin.value) < 0 {
 			newMin = right
 		}
 	}
 	h.minimum = newMin
+
+	//fmt.Println("AFTER:", h.String())
 }
 
-func link(child, parent *HeapNode) {
-	child.left.right = child.right
+func merge(parent, child *HeapNode) {
 	child.right.left = child.left
+	child.left.right = child.right
 
 	child.parent = parent
-	if parent.child != nil {
+	if parent.degree == 0 {
+		parent.child = child
+		child.left = child
+		child.right = child
+	} else {
 		child.left = parent.child
 		child.right = parent.child.right
 		parent.child.right = child
 		child.right.left = child
-	} else {
-		parent.child = child
-		child.left = child
-		child.right = child
 	}
 
 	parent.degree++
-	child.marked = false
 }
 
 func (h *Heap) RemoveMin() interface{} {
 	oldMin := h.minimum
 	if oldMin != nil {
+		h.size--
+
 		if oldMin.degree > 0 {
 			child := oldMin.child
 			child.parent = nil
@@ -198,33 +215,28 @@ func (h *Heap) RemoveMin() interface{} {
 				right.parent = nil
 			}
 
-			minimum := h.minimum
-			if minimum.right == minimum {
-				h.minimum = child
-				h.consolidate()
-			} else {
-				mL := minimum.left
-				mR := minimum.right
+			h.minimum = child
+			if oldMin.right != oldMin {
+				mL := oldMin.left
+				mR := oldMin.right
 				cL := child.left
 
 				mL.right = child
 				child.left = mL
 				cL.right = mR
 				mR.left = cL
-
-				h.minimum = child
-				h.consolidate()
 			}
-		} else if oldMin.right == h.minimum {
+			//fmt.Println("CONSOLIDATING")
+			h.consolidate()
+		} else if oldMin.right == oldMin {
 			h.minimum = nil
 		} else {
-			h.minimum.left.right = h.minimum.right
-			h.minimum.right.left = h.minimum.left
-			h.minimum = h.minimum.right
+			oldMin.left.right = oldMin.right
+			oldMin.right.left = oldMin.left
+			h.minimum = oldMin.right
 			h.consolidate()
 		}
 
-		h.size--
 		if h.size/h.oldFiboTarget == 1 && h.size != 0 && h.oldFiboTarget == 0 {
 			h.fiboIndex--
 			h.fiboTarget = h.oldFiboTarget

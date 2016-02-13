@@ -3,12 +3,9 @@ package fibonacci
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"runtime/pprof"
+	"math/rand"
 	"testing"
 )
-import "math/rand"
 
 func TestHeapNode(t *testing.T) {
 	cases := []struct{ in, want interface{} }{
@@ -32,29 +29,43 @@ func TestHeapCreate(t *testing.T) {
 		{100, 100},
 		{101, 100},
 		{99, 99},
+		{5577006791947779410, 99},
+		{8674665223082153551, 99},
+		{6129484611666145821, 99},
+		{4037200794235010051, 99},
+		{3916589616287113937, 99},
+		{6334824724549167320, 99},
+		{605394647632969758, 99},
+		{1443635317331776148, 99},
+		{894385949183117216, 99},
+		{2775422040480279449, 99},
+		{4751997750760398084, 99},
 	}
+
 	for _, c := range cases {
-		heap.insert(c.in)
+		heap.Insert(c.in)
 		if heap.peek() != c.want {
-			t.Errorf("HeapInsert(%q) == %q, wanted %q", c.in, heap.peek(), c.want)
+			t.Errorf("HeapInsert(%d) == %d, wanted %d", c.in, heap.peek(), c.want)
 		}
 	}
 
 	for i := 10; i >= 0; i-- {
-		heap.insert(i)
+		heap.Insert(i)
 		if heap.peek() != i {
-			t.Errorf("HeapInsert(%q) == %q, wanted %q", i, heap.peek(), i)
+			t.Errorf("HeapInsert(%d) == %d, wanted %d", i, heap.peek(), i)
 		}
 	}
 
 	for i := 0; i < 14; i++ {
-		removed := heap.removeMin()
+		removed := heap.RemoveMin()
 		expected := i
 		if i > 10 {
 			expected = i - 11 + 99
 		}
 		if removed != expected {
-			t.Errorf("HeapRemoveMin == %q, wanted %d", removed, expected)
+			fmt.Println(heap.String())
+			t.Errorf("HeapRemoveMin == %d, wanted %d", removed, expected)
+			t.Fail()
 		}
 	}
 }
@@ -64,14 +75,20 @@ func TestHeapBulk(t *testing.T) {
 		return a.(int) - b.(int)
 	})
 
-	count := 10000
+	const count = 1000000
+	arr := [count]int{}
 	for i := 0; i < count; i++ {
-		heap.insert(rand.Int())
+		arr[i] = rand.Int()
+		//fmt.Println(strconv.Itoa(arr[i]))
 	}
 
-	last := heap.removeMin().(int)
+	for i := 0; i < count; i++ {
+		heap.Insert(arr[i])
+	}
+
+	last := heap.RemoveMin().(int)
 	for i := 1; i < count; i++ {
-		curr := heap.removeMin().(int)
+		curr := heap.RemoveMin().(int)
 		if last > curr {
 			t.Errorf("HeapBulkOperation(size=%d), %d > %d", heap.size, last, curr)
 		}
