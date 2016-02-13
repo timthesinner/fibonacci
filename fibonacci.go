@@ -17,10 +17,8 @@ var fibonacci_numbers = [...]int{2, 3, 5, 8, 13, 21,
 	63245986, 102334155, 165580141, 267914296, 433494437,
 	701408733, 1134903170, 1836311903}
 
-type Compare func(interface{}, interface{}) int
-
 type HeapNode struct {
-	value  interface{}
+	value  int
 	marked bool
 	degree int
 	parent *HeapNode
@@ -34,7 +32,7 @@ func (h *HeapNode) String() string {
 }
 
 type Heap struct {
-	Compare       func(interface{}, interface{}) int
+	Compare       func(int, int) int
 	fiboIndex     int
 	fiboTarget    int
 	oldFiboTarget int
@@ -44,7 +42,7 @@ type Heap struct {
 	minimumValue interface{}
 }
 
-func NewHeap(comp func(interface{}, interface{}) int) *Heap {
+func NewHeap(comp func(int, int) int) *Heap {
 	return &Heap{Compare: comp, size: 0, fiboIndex: 0, fiboTarget: fibonacci_numbers[0], oldFiboTarget: fibonacci_numbers[0]}
 }
 
@@ -92,7 +90,7 @@ func (h *Heap) peek() interface{} {
 	return nil
 }
 
-func (h *Heap) Insert(v interface{}) {
+func (h *Heap) Insert(v int) {
 	h.size++
 
 	node := &HeapNode{value: v}

@@ -17,8 +17,8 @@ func main() {
 	for i := 0; i < count; i++ {
 		arr[i] = rand.Int()
 	}
-	heap := fibonacci.NewHeap(func(a, b interface{}) int {
-		return a.(int) - b.(int)
+	heap := fibonacci.NewHeap(func(a, b int) int {
+		return a - b
 	})
 
 	f, err := os.Create("HeapBulkCPU.prof")
