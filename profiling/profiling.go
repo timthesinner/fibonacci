@@ -21,19 +21,34 @@ func main() {
 		return a - b
 	})
 
-	f, err := os.Create("HeapBulkCPU.prof")
+	cpu, err := os.Create("HeapBulkCPU.prof")
 	if err != nil {
 		log.Fatal(err)
 	}
-	pprof.StartCPUProfile(f)
-	defer pprof.StopCPUProfile()
+	pprof.StartCPUProfile(cpu)
+	defer func() {
+		pprof.StopCPUProfile()
+		cpu.Close()
+	}()
+
+	mem, err := os.Create("HeapBulkMEM.prof")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		pprof.WriteHeapProfile(mem)
+		mem.Close()
+	}()
+
 	for i := 0; i < count; i++ {
 		heap.Insert(arr[i])
 	}
+	heap.Consolidate()
+	fmt.Println("Finished Inserting")
 
-	last := heap.RemoveMin().(int)
+	last := heap.RemoveMin()
 	for i := 1; i < count; i++ {
-		curr := heap.RemoveMin().(int)
+		curr := heap.RemoveMin()
 		if last > curr {
 			fmt.Errorf("HeapBulkOperation(size=%d), %d > %d", heap.Size(), last, curr)
 		}

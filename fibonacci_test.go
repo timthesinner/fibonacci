@@ -87,9 +87,9 @@ func TestHeapBulk(t *testing.T) {
 		heap.Insert(arr[i])
 	}
 
-	last := heap.RemoveMin().(int)
+	last := heap.RemoveMin()
 	for i := 1; i < count; i++ {
-		curr := heap.RemoveMin().(int)
+		curr := heap.RemoveMin()
 		if last > curr {
 			t.Errorf("HeapBulkOperation(size=%d), %d > %d", heap.size, last, curr)
 		}

@@ -17,14 +17,16 @@ var fibonacci_numbers = [...]int{2, 3, 5, 8, 13, 21,
 	63245986, 102334155, 165580141, 267914296, 433494437,
 	701408733, 1134903170, 1836311903}
 
+const SKIP_CONSOLIDATION = 144
+
 type HeapNode struct {
 	value  int
 	marked bool
 	degree int
-	parent *HeapNode
-	child  *HeapNode
-	left   *HeapNode
-	right  *HeapNode
+	//parent *HeapNode
+	child *HeapNode
+	left  *HeapNode
+	right *HeapNode
 }
 
 func (h *HeapNode) String() string {
@@ -38,12 +40,13 @@ type Heap struct {
 	oldFiboTarget int
 
 	size         int
+	roots        int
 	minimum      *HeapNode
 	minimumValue interface{}
 }
 
 func NewHeap(comp func(int, int) int) *Heap {
-	return &Heap{Compare: comp, size: 0, fiboIndex: 0, fiboTarget: fibonacci_numbers[0], oldFiboTarget: fibonacci_numbers[0]}
+	return &Heap{Compare: comp, size: 0, roots: 0, fiboIndex: 0, fiboTarget: fibonacci_numbers[0], oldFiboTarget: fibonacci_numbers[0]}
 }
 
 func (h *Heap) Size() int {
@@ -92,6 +95,7 @@ func (h *Heap) peek() interface{} {
 
 func (h *Heap) Insert(v int) {
 	h.size++
+	h.roots++
 
 	node := &HeapNode{value: v}
 	minimum := h.minimum
@@ -124,33 +128,28 @@ func swap(a, b *HeapNode) {
 	a.value = v
 }
 
+func (h *Heap) Consolidate() {
+	h.consolidate()
+}
+
 func (h *Heap) consolidate() {
 	if h.minimum == nil {
 		return
 	}
 
-	//fmt.Println("BEFORE", h.String())
-
-	minimum := h.minimum
-	count := 1
-	for current := minimum.right; current != minimum; current = current.right {
-		count++
-	}
-
-	roots := make([]*HeapNode, count)
-	roots[0] = minimum
-	count = 1
-	for current := minimum.right; current != minimum; current = current.right {
-		roots[count] = current
-		count++
+	roots := make([]*HeapNode, h.roots)
+	current := h.minimum
+	for i := 0; i < h.roots; i++ {
+		roots[i] = current
+		current = current.right
 	}
 
 	degrees := make([]*HeapNode, 32) //TODO FIX
 	for _, current := range roots {
 		for degree := current.degree; degrees[degree] != nil; degree = current.degree {
+			h.roots--
 			same := degrees[degree]
 
-			//	fmt.Println("PRE MERGE", h.String(), h.minimum.String(), current.String(), same.String())
 			if h.Compare(same.value, current.value) > 0 {
 				merge(current, same)
 				if h.minimum == same {
@@ -163,30 +162,31 @@ func (h *Heap) consolidate() {
 				}
 				current = same
 			}
-			//fmt.Println(h.String())
 
 			degrees[degree] = nil
 		}
 		degrees[current.degree] = current
 	}
 
-	minimum = h.minimum
-	newMin := h.minimum
-	for right := minimum.right; right != minimum; right = right.right {
-		if h.Compare(right.value, newMin.value) < 0 {
-			newMin = right
-		}
-	}
-	h.minimum = newMin
+	h.setMinimum()
+}
 
-	//fmt.Println("AFTER:", h.String())
+func (h *Heap) setMinimum() {
+	minimum := h.minimum
+	right := minimum.right
+	for i := 0; i < h.roots; i++ {
+		if h.Compare(right.value, minimum.value) < 0 {
+			minimum = right
+		}
+		right = right.right
+	}
+	h.minimum = minimum
 }
 
 func merge(parent, child *HeapNode) {
 	child.right.left = child.left
 	child.left.right = child.right
 
-	child.parent = parent
 	if parent.degree == 0 {
 		parent.child = child
 		child.left = child
@@ -201,17 +201,15 @@ func merge(parent, child *HeapNode) {
 	parent.degree++
 }
 
-func (h *Heap) RemoveMin() interface{} {
+func (h *Heap) RemoveMin() int {
 	oldMin := h.minimum
 	if oldMin != nil {
 		h.size--
+		h.roots--
 
 		if oldMin.degree > 0 {
+			h.roots += oldMin.degree
 			child := oldMin.child
-			child.parent = nil
-			for right := child.right; right != child; right = right.right {
-				right.parent = nil
-			}
 
 			h.minimum = child
 			if oldMin.right != oldMin {
@@ -224,17 +222,27 @@ func (h *Heap) RemoveMin() interface{} {
 				cL.right = mR
 				mR.left = cL
 			}
-			//fmt.Println("CONSOLIDATING")
-			h.consolidate()
+
+			if h.roots <= SKIP_CONSOLIDATION {
+				h.setMinimum()
+			} else {
+				h.consolidate()
+			}
 		} else if oldMin.right == oldMin {
 			h.minimum = nil
 		} else {
 			oldMin.left.right = oldMin.right
 			oldMin.right.left = oldMin.left
 			h.minimum = oldMin.right
-			h.consolidate()
+
+			if h.roots <= SKIP_CONSOLIDATION {
+				h.setMinimum()
+			} else {
+				h.consolidate()
+			}
 		}
 
+		//TODO FIX THIS
 		if h.size/h.oldFiboTarget == 1 && h.size != 0 && h.oldFiboTarget == 0 {
 			h.fiboIndex--
 			h.fiboTarget = h.oldFiboTarget
@@ -242,7 +250,11 @@ func (h *Heap) RemoveMin() interface{} {
 				h.oldFiboTarget = fibonacci_numbers[h.fiboIndex]
 			}
 		}
+
+		oldMin.child = nil
+		oldMin.left = nil
+		oldMin.right = nil
 		return oldMin.value
 	}
-	return nil
+	return 0
 }
