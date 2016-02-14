@@ -7,17 +7,26 @@ import (
 	"strconv"
 )
 
-var fibonacci_numbers = [...]int{2, 3, 5, 8, 13, 21,
-	34, 55, 89, 144, 233,
-	377, 610, 987, 1597, 2584,
-	4181, 6765, 10946, 17711, 28657,
-	46368, 75025, 121393, 196418, 317811,
-	514229, 832040, 1346269, 2178309, 3524578,
-	5702887, 9227465, 14930352, 24157817, 39088169,
-	63245986, 102334155, 165580141, 267914296, 433494437,
-	701408733, 1134903170, 1836311903}
+var fibonacci_numbers = [...]int{
+	2, 3, 5, 8, 13, 21,
+	34, 55, 89, 144, 233, 377,
+	610, 987, 1597, 2584, 4181, 6765,
+	10946, 17711, 28657, 46368, 75025, 121393,
+	196418, 317811, 514229, 832040, 1346269, 2178309,
+	3524578, 5702887, 9227465, 14930352, 24157817, 39088169,
+	63245986, 102334155, 165580141, 267914296, 433494437, 701408733,
+	1134903170, 1836311903}
 
-const SKIP_CONSOLIDATION = 144
+var SKIP_CONSOLIDATION = [...]int{
+	8, 8, 8, 8, 8, 8,
+	8, 8, 8, 8, 8, 8,
+	8, 8, 8, 8, 8, 8,
+	89, 89, 89, 89, 89, 89,
+	89, 89, 89, 89, 89, 89,
+	114, 114, 114, 114, 233, 233,
+	233, 233, 233, 233, 233, 233,
+	233, 233,
+}
 
 type HeapNode struct {
 	value  int
@@ -113,7 +122,7 @@ func (h *Heap) Insert(v int) {
 		node.right = node
 	}
 
-	if h.size%h.fiboTarget == 0 {
+	if h.size == h.fiboTarget {
 		h.oldFiboTarget = h.fiboTarget
 		h.fiboIndex++
 		h.fiboTarget = fibonacci_numbers[h.fiboIndex]
@@ -226,7 +235,7 @@ func (h *Heap) RemoveMin() int {
 				mR.left = cL
 			}
 
-			if h.roots <= SKIP_CONSOLIDATION {
+			if h.roots <= SKIP_CONSOLIDATION[h.fiboIndex] {
 				h.setMinimum()
 			} else {
 				h.consolidate()
