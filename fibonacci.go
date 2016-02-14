@@ -199,10 +199,6 @@ func (h *Heap) merge(parent, child *HeapNode) {
 		child.right = parent.child.right
 		parent.child.right = child
 		child.right.left = child
-
-		/*if h.Compare(parent.child.value, child.value) > 0 {
-			parent.child = child
-		}*/
 	}
 
 	parent.degree++
@@ -244,13 +240,12 @@ func (h *Heap) RemoveMin() int {
 			h.consolidate()
 		}
 
-		//TODO FIX THIS
-		if h.size/h.oldFiboTarget == 1 && h.size != 0 && h.oldFiboTarget == 0 {
-			h.fiboIndex--
+		if h.size == h.oldFiboTarget {
 			h.fiboTarget = h.oldFiboTarget
 			if h.fiboIndex > 0 {
-				h.oldFiboTarget = fibonacci_numbers[h.fiboIndex]
+				h.fiboIndex--
 			}
+			h.oldFiboTarget = fibonacci_numbers[h.fiboIndex]
 		}
 
 		oldMin.child = nil
