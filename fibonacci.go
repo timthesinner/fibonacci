@@ -23,10 +23,9 @@ type HeapNode struct {
 	value  int
 	marked bool
 	degree int
-	//parent *HeapNode
-	child *HeapNode
-	left  *HeapNode
-	right *HeapNode
+	child  *HeapNode
+	left   *HeapNode
+	right  *HeapNode
 }
 
 func (h *HeapNode) String() string {
@@ -146,26 +145,30 @@ func (h *Heap) consolidate() {
 
 	degrees := make([]*HeapNode, 32) //TODO FIX
 	for _, current := range roots {
-		for degree := current.degree; degrees[degree] != nil; degree = current.degree {
-			h.roots--
-			same := degrees[degree]
+		if degrees[current.degree] == nil {
+			degrees[current.degree] = current
+		} else {
+			for degree := current.degree; degrees[degree] != nil; degree = current.degree {
+				h.roots--
+				same := degrees[degree]
 
-			if h.Compare(same.value, current.value) > 0 {
-				merge(current, same)
-				if h.minimum == same {
-					h.minimum = current
+				if h.Compare(same.value, current.value) > 0 {
+					merge(current, same)
+					if h.minimum == same {
+						h.minimum = current
+					}
+				} else {
+					merge(same, current)
+					if h.minimum == current {
+						h.minimum = same
+					}
+					current = same
 				}
-			} else {
-				merge(same, current)
-				if h.minimum == current {
-					h.minimum = same
-				}
-				current = same
+
+				degrees[degree] = nil
 			}
-
-			degrees[degree] = nil
+			degrees[current.degree] = current
 		}
-		degrees[current.degree] = current
 	}
 
 	h.setMinimum()
