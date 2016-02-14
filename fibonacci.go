@@ -143,7 +143,7 @@ func (h *Heap) consolidate() {
 		current = current.right
 	}
 
-	degrees := make([]*HeapNode, 32) //TODO FIX
+	degrees := make([]*HeapNode, h.fiboIndex+1)
 	for _, current := range roots {
 		if degrees[current.degree] == nil {
 			degrees[current.degree] = current
@@ -153,12 +153,12 @@ func (h *Heap) consolidate() {
 				same := degrees[degree]
 
 				if h.Compare(same.value, current.value) > 0 {
-					merge(current, same)
+					h.merge(current, same)
 					if h.minimum == same {
 						h.minimum = current
 					}
 				} else {
-					merge(same, current)
+					h.merge(same, current)
 					if h.minimum == current {
 						h.minimum = same
 					}
@@ -186,7 +186,7 @@ func (h *Heap) setMinimum() {
 	h.minimum = minimum
 }
 
-func merge(parent, child *HeapNode) {
+func (h *Heap) merge(parent, child *HeapNode) {
 	child.right.left = child.left
 	child.left.right = child.right
 
@@ -199,6 +199,10 @@ func merge(parent, child *HeapNode) {
 		child.right = parent.child.right
 		parent.child.right = child
 		child.right.left = child
+
+		/*if h.Compare(parent.child.value, child.value) > 0 {
+			parent.child = child
+		}*/
 	}
 
 	parent.degree++
@@ -237,12 +241,7 @@ func (h *Heap) RemoveMin() int {
 			oldMin.left.right = oldMin.right
 			oldMin.right.left = oldMin.left
 			h.minimum = oldMin.right
-
-			if h.roots <= SKIP_CONSOLIDATION {
-				h.setMinimum()
-			} else {
-				h.consolidate()
-			}
+			h.consolidate()
 		}
 
 		//TODO FIX THIS
