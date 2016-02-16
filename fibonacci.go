@@ -46,15 +46,17 @@ type Heap struct {
 	fiboIndex     int
 	fiboTarget    int
 	oldFiboTarget int
+	size          int
+	roots         int
 
-	size         int
-	roots        int
-	minimum      *HeapNode
-	minimumValue interface{}
+	minimum *HeapNode
+	degrees []*HeapNode
 }
 
 func NewHeap(comp func(int, int) int) *Heap {
-	return &Heap{Compare: comp, size: 0, roots: 0, fiboIndex: 0, fiboTarget: fibonacci_numbers[0], oldFiboTarget: fibonacci_numbers[0]}
+	return &Heap{Compare: comp, size: 0, roots: 0, fiboIndex: 0,
+		fiboTarget: fibonacci_numbers[0], oldFiboTarget: fibonacci_numbers[0],
+		degrees: make([]*HeapNode, 8)}
 }
 
 func (h *Heap) Size() int {
@@ -138,7 +140,12 @@ func (h *Heap) consolidate() {
 	var current, same *HeapNode
 	iter := h.minimum
 	roots := h.roots
-	degrees := make([]*HeapNode, h.fiboIndex+1)
+	degrees := h.degrees
+	if len(degrees) <= h.fiboIndex+1 {
+		degrees = make([]*HeapNode, h.fiboIndex+1)
+		h.degrees = degrees
+	}
+
 	for i := 0; i < roots; i++ {
 		current = iter
 		iter = iter.right
@@ -168,19 +175,16 @@ func (h *Heap) consolidate() {
 		}
 	}
 
-	h.setMinimum()
-}
-
-func (h *Heap) setMinimum() {
-	minimum := h.minimum
-	right := minimum.right
+	current = h.minimum
+	iter = current.right
 	for i := 0; i < h.roots; i++ {
-		if h.Compare(right.value, minimum.value) < 0 {
-			minimum = right
+		degrees[iter.degree] = nil
+		if h.Compare(iter.value, current.value) < 0 {
+			current = iter
 		}
-		right = right.right
+		iter = iter.right
 	}
-	h.minimum = minimum
+	h.minimum = current
 }
 
 func merge(parent, child *HeapNode) {
@@ -211,7 +215,6 @@ func (h *Heap) RemoveMin() int {
 			h.roots += oldMin.degree
 			child := oldMin.child
 
-			h.minimum = child
 			if oldMin.right != oldMin {
 				mL := oldMin.left
 				mR := oldMin.right
@@ -224,8 +227,16 @@ func (h *Heap) RemoveMin() int {
 			}
 
 			if h.roots <= SKIP_CONSOLIDATION[h.fiboIndex] {
-				h.setMinimum()
+				iter := child.right
+				for i := 0; i < h.roots; i++ {
+					if h.Compare(iter.value, child.value) < 0 {
+						child = iter
+					}
+					iter = iter.right
+				}
+				h.minimum = child
 			} else {
+				h.minimum = child
 				h.consolidate()
 			}
 		} else if oldMin.right == oldMin {
