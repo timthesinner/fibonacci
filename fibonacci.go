@@ -130,44 +130,32 @@ func (h *Heap) Insert(v int) {
 	}
 }
 
-func swap(a, b *HeapNode) {
-	v := b.value
-	b.value = a.value
-	a.value = v
-}
-
 func (h *Heap) Consolidate() {
 	h.consolidate()
 }
 
 func (h *Heap) consolidate() {
-	if h.minimum == nil {
-		return
-	}
-
-	roots := make([]*HeapNode, h.roots)
-	current := h.minimum
-	for i := 0; i < h.roots; i++ {
-		roots[i] = current
-		current = current.right
-	}
-
+	var current, same *HeapNode
+	iter := h.minimum
+	roots := h.roots
 	degrees := make([]*HeapNode, h.fiboIndex+1)
-	for _, current := range roots {
+	for i := 0; i < roots; i++ {
+		current = iter
+		iter = iter.right
 		if degrees[current.degree] == nil {
 			degrees[current.degree] = current
 		} else {
 			for degree := current.degree; degrees[degree] != nil; degree = current.degree {
 				h.roots--
-				same := degrees[degree]
+				same = degrees[degree]
 
 				if h.Compare(same.value, current.value) > 0 {
-					h.merge(current, same)
+					merge(current, same)
 					if h.minimum == same {
 						h.minimum = current
 					}
 				} else {
-					h.merge(same, current)
+					merge(same, current)
 					if h.minimum == current {
 						h.minimum = same
 					}
@@ -195,7 +183,7 @@ func (h *Heap) setMinimum() {
 	h.minimum = minimum
 }
 
-func (h *Heap) merge(parent, child *HeapNode) {
+func merge(parent, child *HeapNode) {
 	child.right.left = child.left
 	child.left.right = child.right
 
