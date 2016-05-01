@@ -1,4 +1,4 @@
-// fibonacci
+// Package fibonacci by TimTheSinner
 package fibonacci
 
 import (
@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-var fibonacci_numbers = [...]int{
+var fibonacciNumbers = [...]int{
 	2, 3, 5, 8, 13, 21,
 	34, 55, 89, 144, 233, 377,
 	610, 987, 1597, 2584, 4181, 6765,
@@ -17,7 +17,7 @@ var fibonacci_numbers = [...]int{
 	63245986, 102334155, 165580141, 267914296, 433494437, 701408733,
 	1134903170, 1836311903}
 
-var SKIP_CONSOLIDATION = [...]int{
+var skipConsolidation = [...]int{
 	8, 8, 8, 8, 8, 8,
 	8, 8, 8, 8, 8, 8,
 	8, 8, 8, 8, 8, 8,
@@ -28,6 +28,7 @@ var SKIP_CONSOLIDATION = [...]int{
 	233, 233,
 }
 
+//HeapNode heap storage node
 type HeapNode struct {
 	value  int
 	marked bool
@@ -41,6 +42,7 @@ func (h *HeapNode) String() string {
 	return fmt.Sprintf("Node[Degree:%d Value:%v, Marked:%t]", h.degree, h.value, h.marked)
 }
 
+//Heap fibonacci heap
 type Heap struct {
 	Compare       func(int, int) int
 	fiboIndex     int
@@ -53,12 +55,14 @@ type Heap struct {
 	degrees []*HeapNode
 }
 
+//NewHeap create a new FibonacciHeap
 func NewHeap(comp func(int, int) int) *Heap {
 	return &Heap{Compare: comp, size: 0, roots: 0, fiboIndex: 0,
-		fiboTarget: fibonacci_numbers[0], oldFiboTarget: fibonacci_numbers[0],
+		fiboTarget: fibonacciNumbers[0], oldFiboTarget: fibonacciNumbers[0],
 		degrees: make([]*HeapNode, 8)}
 }
 
+//Size the size of the heap
 func (h *Heap) Size() int {
 	return h.size
 }
@@ -103,6 +107,7 @@ func (h *Heap) peek() interface{} {
 	return nil
 }
 
+//Insert an object into the heap
 func (h *Heap) Insert(v int) {
 	h.size++
 	h.roots++
@@ -127,11 +132,12 @@ func (h *Heap) Insert(v int) {
 	if h.size == h.fiboTarget {
 		h.oldFiboTarget = h.fiboTarget
 		h.fiboIndex++
-		h.fiboTarget = fibonacci_numbers[h.fiboIndex]
+		h.fiboTarget = fibonacciNumbers[h.fiboIndex]
 		h.consolidate()
 	}
 }
 
+//Consolidate the heap
 func (h *Heap) Consolidate() {
 	h.consolidate()
 }
@@ -205,6 +211,7 @@ func merge(parent, child *HeapNode) {
 	parent.degree++
 }
 
+//RemoveMin removes the smallest value in the heap
 func (h *Heap) RemoveMin() int {
 	oldMin := h.minimum
 	if oldMin != nil {
@@ -226,7 +233,7 @@ func (h *Heap) RemoveMin() int {
 				mR.left = cL
 			}
 
-			if h.roots <= SKIP_CONSOLIDATION[h.fiboIndex] {
+			if h.roots <= skipConsolidation[h.fiboIndex] {
 				iter := child.right
 				for i := 0; i < h.roots; i++ {
 					if h.Compare(iter.value, child.value) < 0 {
@@ -253,7 +260,7 @@ func (h *Heap) RemoveMin() int {
 			if h.fiboIndex > 0 {
 				h.fiboIndex--
 			}
-			h.oldFiboTarget = fibonacci_numbers[h.fiboIndex]
+			h.oldFiboTarget = fibonacciNumbers[h.fiboIndex]
 		}
 
 		oldMin.child = nil
